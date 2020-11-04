@@ -1,0 +1,116 @@
+---
+title: "Prediction Assignment Writeup"
+author: "Rodrigo Morais"
+date: "11/4/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(rpart)
+library(rpart.plot)
+library(rattle)
+library(caret)
+library(randomForest)
+set.seed(1104)
+```
+
+## Introduction
+
+This is a requirement in the Practical Machine Learning course by Johns Hopkins University. The goal of this assignment is to predict the manner of the subject (6 participants) performed exercises. The data was obtained from devices such as Jawbone Up, Nike FuelBand, and Fitbit. In order to predict the manner of the subject did the exercises we will be using the decision tree and random forest methods to determine the best prediction with the highest accuracy possible.
+
+## Data
+
+The training data for this project is available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data is available here:
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+## Analysis 
+
+### Data acquisition and transformation
+```{r cache=TRUE}
+# downloading and loading data
+test_url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+train_url <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+
+testing <- read.csv(url(test_url), na.strings = c("", "NA"))
+training <- read.csv(url(train_url), na.strings = c("", "NA"))
+
+```
+
+```{r}
+dim(testing)
+dim(training)
+
+```
+
+Cross-validation will be performed by spliting the training dataset to a new one with 70% of the observations. The models for prediction will be built using this dataset. The testing dataset will have 30% of the observations, and will be used to evalueate the accuracy of the prediction models.
+
+```{r}
+partdata <- createDataPartition(y = training$classe, p = 0.7, list = FALSE)
+traindata <- training[partdata,]
+testdata <- training[-partdata,]
+testdata$classe <- as.factor(testdata$classe)
+
+dim(traindata)
+dim(testdata)
+```
+```{r}
+nearzero <- nearZeroVar(traindata)
+traindata <- traindata[, -nearzero]
+testdata  <- testdata[, -nearzero]
+
+# removing nomenclature columns and variable with too many NA values
+traindata <- traindata[, -(1:5)]
+testdata <- testdata[, -(1:5)]
+nona <- sapply(traindata, function(x) mean(is.na(x))) > 0.90
+traindata <- traindata[, nona == FALSE]
+testdata  <- testdata[, nona == FALSE]
+testdata$classe <- as.factor(testdata$classe)
+```
+
+## Prediction Models
+
+### Decision Tree
+```{r cache=TRUE}
+# traindata dt
+dtmod <- rpart(classe ~ ., data = traindata, method = "class")
+fancyRpartPlot(dtmod)
+
+# testdata prediction
+pred_test <- predict(dtmod, newdata = testdata, type = "class")
+conf_test <- confusionMatrix(pred_test, testdata$classe)
+conf_test
+
+# plot
+plot(conf_test$table, col = conf_test$byClass, main = paste("Decision Tree Accuracy =", round(conf_test$overall['Accuracy'], 3)))
+
+```
+
+### Random Forest
+```{r cache=TRUE}
+# traindata rf
+randof <- trainControl(method = "cv", number = 3, verboseIter = FALSE)
+randomodfit <- train(classe ~ ., data = traindata, method = "rf", trControl = randof)
+randomodfit$finalModel
+
+# testdata prediction
+pred_train <- predict(randomodfit, newdata = testdata)
+conf_train <- confusionMatrix(pred_train, testdata$classe)
+conf_train
+
+# plot
+plot(conf_train$table, col = conf_train$byClass, main = paste("Random Forest Accuracy = ", round(conf_train$overall['Accuracy'], 3)))
+```
+
+## Using Randon Forest to find prediction cases
+```{r}
+pred_rf <- predict(randomodfit, newdata = testing)
+pred_rf
+
+```
