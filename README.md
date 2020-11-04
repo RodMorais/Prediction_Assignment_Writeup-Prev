@@ -1,4 +1,8 @@
-# Prediction_Assignment_Writeup-Prev
+# Prediction Assignment Writeup
+
+# Introduction
+
+This is a requirement in the Practical Machine Learning course by Johns Hopkins University. The goal of this assignment is to predict the manner of the subject (6 participants) performed exercises. The data was obtained from devices such as Jawbone Up, Nike FuelBand, and Fitbit. In order to predict the manner of the subject did the exercises we will be using the decision tree and random forest methods to determine the best prediction with the highest accuracy possible.
 
 # Background
 
